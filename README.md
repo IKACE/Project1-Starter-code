@@ -10,4 +10,5 @@ To run the project on Great Lakes, please use the command:
 
 Before submitting to autograder, please run
 > ./gradlew clean jar
+
 for each subproject.
