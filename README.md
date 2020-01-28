@@ -8,7 +8,4 @@ This will produce a jar file with all dependencies and source code in the jar. T
 To run the project on Great Lakes, please use the command:
 > hadoop jar build/libs/JARNAME.jar <ARGS>
 
-Before submitting to autograder, please run
-> ./gradlew clean jar
-
-and zip the directory for each subproject. You  need do submit zip file to autograder.
+Before submitting, zip the directory for each subproject. You  need do submit zip file to autograder.
