@@ -9,7 +9,7 @@
 
 echo "start Amazon Review 40M with k=2 s=30" >> log.txt
 date >> log.txt
-hadoop jar build/libs/FrequentItemsets.jar -k 2 -s 30  --ratingsFile Ama40TF  --outputScheme Ama40R
+hadoop jar build/libs/FrequentItemsets.jar -k 2 -s 30  --ratingsFile /var/eecs476w21/Project1/AmazonReview40M.csv  --outputScheme Ama40R
 echo "Finished job at" >> log.txt
 date >> log.txt
 echo "---------" >> log.txt
@@ -18,7 +18,7 @@ hdfs dfs -get Ama40R2
 
 echo "start Amazon Review 60M with k=2 s=30" >> log.txt
 date >> log.txt
-hadoop jar build/libs/FrequentItemsets.jar -k 2 -s 30  --ratingsFile Ama60TF  --outputScheme Ama60R
+hadoop jar build/libs/FrequentItemsets.jar -k 2 -s 30  --ratingsFile /var/eecs476w21/Project1/AmazonReview60M.csv  --outputScheme Ama60R
 echo "Finished job at" >> log.txt
 date >> log.txt
 echo "---------" >> log.txt
@@ -27,7 +27,7 @@ hdfs dfs -get Ama60R2
 
 echo "start Amazon Review 60M with k=2 s=45 for 60M" >> log.txt
 date >> log.txt
-hadoop jar build/libs/FrequentItemsets.jar -k 2 -s 45  --ratingsFile Ama60TF  --outputScheme Ama60s45R
+hadoop jar build/libs/FrequentItemsets.jar -k 2 -s 45  --ratingsFile /var/eecs476w21/Project1/AmazonReview60M.csv  --outputScheme Ama60s45R
 echo "Finished job at" >> log.txt
 date >> log.txt
 echo "---------" >> log.txt
@@ -36,7 +36,7 @@ hdfs dfs -get Ama60s45R2
 
 echo "start Amazon Review 60M with k=2 s=60 for 60M" >> log.txt
 date >> log.txt
-hadoop jar build/libs/FrequentItemsets.jar -k 2 -s 60  --ratingsFile Ama60TF  --outputScheme Ama60s60R
+hadoop jar build/libs/FrequentItemsets.jar -k 2 -s 60  --ratingsFile /var/eecs476w21/Project1/AmazonReview60M.csv  --outputScheme Ama60s60R
 echo "Finished job at" >> log.txt
 date >> log.txt
 echo "---------" >> log.txt
