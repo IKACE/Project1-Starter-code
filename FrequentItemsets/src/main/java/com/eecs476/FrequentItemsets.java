@@ -81,7 +81,7 @@ public class FrequentItemsets {
     public static class Pass2Mapper
             extends Mapper<LongWritable, Text, Text, IntWritable> {
         private final static ArrayList<String> Pass1Counter = new ArrayList<>();
-        private static Set<SortedSet<String>> FrequentSet = new HashSet<>();
+//        private static Set<SortedSet<String>> FrequentSet = new HashSet<>();
 //        private static Set<SortedSet<String>> newFreqSet = new HashSet<>();
         protected void setup(Context context) throws IOException, InterruptedException {
             Configuration conf = context.getConfiguration();
@@ -98,67 +98,79 @@ public class FrequentItemsets {
                 Pass1Counter.add(strs[0].toString());
             }
 
-            if (pass == 2) {
-                for (int i = 0; i < Pass1Counter.size(); i++) {
-                    for (int j = i + 1; j < Pass1Counter.size(); j++) {
-                        SortedSet<String> pair = new TreeSet<>();
-                        pair.add(Pass1Counter.get(i));
-                        pair.add(Pass1Counter.get(j));
-                        FrequentSet.add(pair);
-                    }
-                }
-            } else {
-                String PrevPassFolder = conf.get("PassK-1Folder");
-                newPath = new Path(PrevPassFolder,"part-r-00000");
-                fs = newPath.getFileSystem(conf);
-                inputStream = fs.open(newPath);
-                bufferedReader = new BufferedReader(
-                        new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-                line = new String();
-                while ((line = bufferedReader.readLine()) != null) {
-                    String[] strs = line.toString().split(",");
-                    SortedSet<String> pair = new TreeSet<>();
-                    for (int i=0; i<pass-1; i++) {
-                        pair.add(strs[i]);
-                    }
-                    FrequentSet.add(pair);
-                }
-                Set<SortedSet<String>> newFreqSet = new HashSet<>();
-                for (SortedSet<String> pair: FrequentSet) {
-                    for (String cand: Pass1Counter) {
-                        if (pair.contains(cand)) continue;
-                        SortedSet<String> newPair = new TreeSet<>(pair);
-                        newPair.add(cand);
-                        newFreqSet.add(newPair);
-                    }
-                }
-                FrequentSet = new HashSet<>(newFreqSet);
-
-            }
+//            if (pass == 2) {
+//                for (int i = 0; i < Pass1Counter.size(); i++) {
+//                    for (int j = i + 1; j < Pass1Counter.size(); j++) {
+//                        SortedSet<String> pair = new TreeSet<>();
+//                        pair.add(Pass1Counter.get(i));
+//                        pair.add(Pass1Counter.get(j));
+//                        FrequentSet.add(pair);
+//                    }
+//                }
+//            } else {
+//                String PrevPassFolder = conf.get("PassK-1Folder");
+//                newPath = new Path(PrevPassFolder,"part-r-00000");
+//                fs = newPath.getFileSystem(conf);
+//                inputStream = fs.open(newPath);
+//                bufferedReader = new BufferedReader(
+//                        new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+//                line = new String();
+//                while ((line = bufferedReader.readLine()) != null) {
+//                    String[] strs = line.toString().split(",");
+//                    SortedSet<String> pair = new TreeSet<>();
+//                    for (int i=0; i<pass-1; i++) {
+//                        pair.add(strs[i]);
+//                    }
+//                    FrequentSet.add(pair);
+//                }
+//                Set<SortedSet<String>> newFreqSet = new HashSet<>();
+//                for (SortedSet<String> pair: FrequentSet) {
+//                    for (String cand: Pass1Counter) {
+//                        if (pair.contains(cand)) continue;
+//                        SortedSet<String> newPair = new TreeSet<>(pair);
+//                        newPair.add(cand);
+//                        newFreqSet.add(newPair);
+//                    }
+//                }
+//                FrequentSet = new HashSet<>(newFreqSet);
+//
+//            }
         }
         public void map(LongWritable key, Text value, Context context
         ) throws IOException, InterruptedException {
             String[] strs = value.toString().split(",");
-            Set<String> movies = new HashSet<>();
+            ArrayList<String> movies = new ArrayList<>();
             for (int i=1; i<strs.length; i++) {
-                movies.add(strs[i]);
+                if (Pass1Counter.contains(strs[i])) {
+                    movies.add(strs[i]);
+                }
             }
-            for (SortedSet<String> pair: FrequentSet) {
-                String keyStr = new String();
-                boolean containsAll = true;
-                for (String cand: pair) {
-                    keyStr += cand;
-                    keyStr += ",";
-                    if (!movies.contains(cand)) {
-                        containsAll = false;
-                        break;
+            Set<SortedSet<String>> FrequentSet = new HashSet<>();
+            for (int i = 0; i < movies.size(); i++) {
+                for (int j = i + 1; j < movies.size(); j++) {
+                    if (movies.get(i).compareTo(movies.get(j)) < 0) {
+                        context.write(new Text(movies.get(i) + "," + movies.get(j)), one);
+                    } else {
+                        context.write(new Text(movies.get(j) + "," + movies.get(i)), one);
                     }
                 }
-                if (containsAll) {
-                    keyStr = keyStr.substring(0, keyStr.length()-1);
-                    context.write(new Text(keyStr), one);
-                }
             }
+//            for (SortedSet<String> pair: FrequentSet) {
+//                String keyStr = new String();
+//                boolean containsAll = true;
+//                for (String cand: pair) {
+//                    keyStr += cand;
+//                    keyStr += ",";
+//                    if (!movies.contains(cand)) {
+//                        containsAll = false;
+//                        break;
+//                    }
+//                }
+//                if (containsAll) {
+//                    keyStr = keyStr.substring(0, keyStr.length()-1);
+//                    context.write(new Text(keyStr), one);
+//                }
+//            }
 //            for (int i=1; i<strs.length; i++) {
 //                for (int j=i+1; j<strs.length; j++) {
 //                    SortedSet<String> pair = new TreeSet<>();
