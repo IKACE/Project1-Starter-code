@@ -82,7 +82,7 @@ public class FrequentItemsets {
             extends Mapper<LongWritable, Text, Text, IntWritable> {
         private final static ArrayList<String> Pass1Counter = new ArrayList<>();
         private static Set<SortedSet<String>> FrequentSet = new HashSet<>();
-        private static Set<SortedSet<String>> newFreqSet = new HashSet<>();
+//        private static Set<SortedSet<String>> newFreqSet = new HashSet<>();
         protected void setup(Context context) throws IOException, InterruptedException {
             Configuration conf = context.getConfiguration();
             String Pass1Folder = conf.get("Pass1Folder");
@@ -123,6 +123,7 @@ public class FrequentItemsets {
                     }
                     FrequentSet.add(pair);
                 }
+                Set<SortedSet<String>> newFreqSet = new HashSet<>();
                 for (SortedSet<String> pair: FrequentSet) {
                     for (String cand: Pass1Counter) {
                         if (pair.contains(cand)) continue;
@@ -350,6 +351,8 @@ public class FrequentItemsets {
         conf.set("mapreduce.job.queuename", "eecs476w21");         // required for this to work on GreatLakes
 //        conf.set("k", Integer.toString(k));
         conf.set("s", Integer.toString(s));
+
+        conf.setInt("mapreduce.task.timeout", 6000000);
         if (k == 1) {
             Job Pass1Job = Job.getInstance(conf, "Pass1Job");
             Pass1Job.setJarByClass(FrequentItemsets.class);
