@@ -1,5 +1,7 @@
 package com.eecs476;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -11,12 +13,13 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class FrequentItemsets {
     private final static IntWritable one = new IntWritable(1);
-    private final static ArrayList<String> Pass1Counter = new ArrayList<>();
-    private static Set<SortedSet<String>> FrequentSet = new HashSet<>();
+//    private final static ArrayList<String> Pass1Counter = new ArrayList<>();
+//    private static Set<SortedSet<String>> FrequentSet = new HashSet<>();
     public static int k = -1;
     public static int s = -1;
 
@@ -49,33 +52,89 @@ public class FrequentItemsets {
         public void reduce(Text key, Iterable<IntWritable> values,
                            Context context
         ) throws IOException, InterruptedException {
+            Configuration conf = context.getConfiguration();
+            Integer s_internal = new Integer(conf.get("s"));
             int sum = 0;
             for (IntWritable value: values) {
                 sum += value.get();
             }
-            if (sum >= s) {
-                Pass1Counter.add(key.toString());
+            if (sum >= s_internal) {
+//                Pass1Counter.add(key.toString());
                 context.write(key, new IntWritable(sum));
             }
         }
         // generate candidate set
-        protected void cleanup(Context context) throws IOException, InterruptedException {
-            for (int i=0; i<Pass1Counter.size(); i++) {
-                for (int j=i+1; j<Pass1Counter.size(); j++) {
-                    SortedSet<String> pair = new TreeSet<>();
-                    pair.add(Pass1Counter.get(i));
-                    pair.add(Pass1Counter.get(j));
-                    FrequentSet.add(pair);
-                }
-            }
-        }
+//        protected void cleanup(Context context) throws IOException, InterruptedException {
+//            for (int i=0; i<Pass1Counter.size(); i++) {
+//                for (int j=i+1; j<Pass1Counter.size(); j++) {
+//                    SortedSet<String> pair = new TreeSet<>();
+//                    pair.add(Pass1Counter.get(i));
+//                    pair.add(Pass1Counter.get(j));
+//                    FrequentSet.add(pair);
+//                }
+//            }
+//        }
     }
 
     // TODO:: To extends the solution into k > 2 and edge condition k = 1
 
     public static class Pass2Mapper
             extends Mapper<LongWritable, Text, Text, IntWritable> {
+        private final static ArrayList<String> Pass1Counter = new ArrayList<>();
+        private static Set<SortedSet<String>> FrequentSet = new HashSet<>();
+        private static Set<SortedSet<String>> newFreqSet = new HashSet<>();
+        protected void setup(Context context) throws IOException, InterruptedException {
+            Configuration conf = context.getConfiguration();
+            String Pass1Folder = conf.get("Pass1Folder");
+            Integer pass = new Integer(conf.get("Pass"));
+            Path newPath = new Path(Pass1Folder,"part-r-00000");
+            FileSystem fs = newPath.getFileSystem(conf);
+            FSDataInputStream inputStream = fs.open(newPath);
+            BufferedReader bufferedReader = new BufferedReader(
+                    new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+            String line = new String();
+            while ((line = bufferedReader.readLine()) != null) {
+                String[] strs = line.toString().split(",");
+                Pass1Counter.add(strs[0].toString());
+            }
 
+            if (pass == 2) {
+                for (int i = 0; i < Pass1Counter.size(); i++) {
+                    for (int j = i + 1; j < Pass1Counter.size(); j++) {
+                        SortedSet<String> pair = new TreeSet<>();
+                        pair.add(Pass1Counter.get(i));
+                        pair.add(Pass1Counter.get(j));
+                        FrequentSet.add(pair);
+                    }
+                }
+            } else {
+                String PrevPassFolder = conf.get("PassK-1Folder");
+                newPath = new Path(PrevPassFolder,"part-r-00000");
+                fs = newPath.getFileSystem(conf);
+                inputStream = fs.open(newPath);
+                bufferedReader = new BufferedReader(
+                        new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+                line = new String();
+                while ((line = bufferedReader.readLine()) != null) {
+                    String[] strs = line.toString().split(",");
+                    SortedSet<String> pair = new TreeSet<>();
+                    for (int i=0; i<pass-1; i++) {
+                        pair.add(strs[i]);
+                    }
+                    FrequentSet.add(pair);
+                }
+                for (SortedSet<String> pair: FrequentSet) {
+                    for (String cand: Pass1Counter) {
+                        if (pair.contains(cand)) continue;
+                        SortedSet<String> newPair = new TreeSet<>(pair);
+                        newPair.add(cand);
+                        newFreqSet.add(newPair);
+                    }
+                }
+                FrequentSet = new HashSet<>(newFreqSet);
+
+            }
+        }
         public void map(LongWritable key, Text value, Context context
         ) throws IOException, InterruptedException {
             String[] strs = value.toString().split(",");
@@ -146,11 +205,13 @@ public class FrequentItemsets {
         public void reduce(Text key, Iterable<IntWritable> values,
                            Context context
         ) throws IOException, InterruptedException {
+            Configuration conf = context.getConfiguration();
+            Integer s_internal = new Integer(conf.get("s"));
             int sum = 0;
             for (IntWritable value: values) {
                 sum += value.get();
             }
-            if (sum >= s) {
+            if (sum >= s_internal) {
                 // TODO: free k=1 set, fill in k=2 set
 //                String[] strs = key.toString().split(",");
 //                SortedSet<String> pair = new TreeSet<>();
@@ -158,38 +219,39 @@ public class FrequentItemsets {
 //                pair.add(strs[1]);
 //                FrequentSet.add(pair);
                 context.write(key, new IntWritable(sum));
-            } else {
-                String[] strs = key.toString().split(",");
-                SortedSet<String> victim = new TreeSet<>();
-                for (int i=0; i<strs.length; i++) {
-                    victim.add(strs[i]);
-                }
-                FrequentSet.remove(victim);
             }
+//            else {
+//                String[] strs = key.toString().split(",");
+//                SortedSet<String> victim = new TreeSet<>();
+//                for (int i=0; i<strs.length; i++) {
+//                    victim.add(strs[i]);
+//                }
+//                FrequentSet.remove(victim);
+//            }
         }
 
         // generate new cand set
-        protected void cleanup(Context context) throws IOException, InterruptedException {
-            Set<SortedSet<String>> newFreqSet = new HashSet<>();
-            for (SortedSet<String> pair: FrequentSet) {
-                for (String cand: Pass1Counter) {
-                    if (pair.contains(cand)) continue;
-                    SortedSet<String> newPair = new TreeSet<>(pair);
-                    newPair.add(cand);
-                    newFreqSet.add(newPair);
-                }
-            }
-            FrequentSet = new HashSet<>(newFreqSet);
-            for (SortedSet<String> pair: FrequentSet) {
-//                String keyStr = new String();
-//                for (String cand: pair) {
-//                    keyStr += cand;
-//                    keyStr += ",";
+//        protected void cleanup(Context context) throws IOException, InterruptedException {
+//            Set<SortedSet<String>> newFreqSet = new HashSet<>();
+//            for (SortedSet<String> pair: FrequentSet) {
+//                for (String cand: Pass1Counter) {
+//                    if (pair.contains(cand)) continue;
+//                    SortedSet<String> newPair = new TreeSet<>(pair);
+//                    newPair.add(cand);
+//                    newFreqSet.add(newPair);
 //                }
-//                keyStr = keyStr.substring(0, keyStr.length()-1);
-                System.out.println("In NewFreqSet:"+ pair);
-            }
-        }
+//            }
+//            FrequentSet = new HashSet<>(newFreqSet);
+//            for (SortedSet<String> pair: FrequentSet) {
+////                String keyStr = new String();
+////                for (String cand: pair) {
+////                    keyStr += cand;
+////                    keyStr += ",";
+////                }
+////                keyStr = keyStr.substring(0, keyStr.length()-1);
+//                System.out.println("In NewFreqSet:"+ pair);
+//            }
+//        }
     }
 
 //    public static class PassKMapper
@@ -286,7 +348,8 @@ public class FrequentItemsets {
         Configuration conf = new Configuration();
         conf.set("mapred.textoutputformat.separator", ",");
         conf.set("mapreduce.job.queuename", "eecs476w21");         // required for this to work on GreatLakes
-
+//        conf.set("k", Integer.toString(k));
+        conf.set("s", Integer.toString(s));
         if (k == 1) {
             Job Pass1Job = Job.getInstance(conf, "Pass1Job");
             Pass1Job.setJarByClass(FrequentItemsets.class);
@@ -330,7 +393,8 @@ public class FrequentItemsets {
 
             Pass1Job.waitForCompletion(true);
 
-
+            conf.set("Pass1Folder", outputScheme + "1");
+            conf.set("Pass", Integer.toString(2));
             Job Pass2Job = Job.getInstance(conf, "Pass2Job");
             Pass2Job.setJarByClass(FrequentItemsets.class);
             Pass2Job.setNumReduceTasks(1);
@@ -374,6 +438,9 @@ public class FrequentItemsets {
             Pass1Job.waitForCompletion(true);
 
             for (int i=0; i<k-1; i++) {
+                conf.set("Pass1Folder", outputScheme + "1");
+                conf.set("PassK-1Folder", outputScheme + Integer.toString(i+1));
+                conf.set("Pass", Integer.toString(i+2));
                 Job Pass2Job = Job.getInstance(conf, "Pass2Job");
                 Pass2Job.setJarByClass(FrequentItemsets.class);
                 Pass2Job.setNumReduceTasks(1);
